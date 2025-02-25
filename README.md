@@ -2,41 +2,132 @@
 
 This FastAPI application simulates user behaviors using Markov Chains and allows agents to register webhooks to be notified of simulated user actions.
 
-## Features
+## Quick Start Guide
 
-- Create and manage Markov Chains to simulate user behavior
-- Register and unregister agents with webhooks
-- Run simulations with configurable steps
-- Notify agents of simulated user actions
-- Collect and aggregate agent responses
-
-## Requirements
-
-- Python 3.12 or higher
-- PostgreSQL (for production use)
-
-## Installation
-
-1. Clone the repository
-2. Create a virtual environment: `python -m venv venv`
-3. Activate the virtual environment:
-   - Windows: `venv\Scripts\activate`
-   - Unix/MacOS: `source venv/bin/activate`
-4. Install dependencies: `pip install -r requirements.txt`
-
-## Running the Application
+### 1. Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/subscribe-to-mchain.git
+cd subscribe-to-mchain
+
+# Create a virtual environment
+python -m venv venv
+
+# Activate the virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Running the Main Simulator
+
+```bash
+# Start the main application
 uvicorn app.main:app --reload
 ```
 
-The API will be available at `http://localhost:8000`
+The simulator will automatically create a default e-commerce Markov chain on startup. You can access the API at:
+- API: http://localhost:8000
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
-## API Documentation
+### 3. Running an Agent (Worker)
 
-When running, access the interactive API documentation at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+In a new terminal window, start the example agent:
+
+```bash
+# Activate the virtual environment (if not already activated)
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+
+# Start the example counter agent on port 8001
+uvicorn examples.agent_counter:app --port 8001
+```
+
+The agent will automatically register itself with the simulator on startup. You can verify this by checking:
+- Agent status: http://localhost:8001/status
+
+### 4. Running a Simulation
+
+#### Option 1: Using the Default Chain ID Endpoint
+
+```bash
+# Get the default chain ID
+DEFAULT_CHAIN=$(curl -s http://localhost:8000/default-chain | python -c "import sys, json; print(json.load(sys.stdin)['id'])")
+
+# Run a simulation with 20 steps
+curl -X POST http://localhost:8000/simulate/ \
+  -H "Content-Type: application/json" \
+  -d "{\"chain_id\": \"$DEFAULT_CHAIN\", \"steps\": 20}"
+```
+
+#### Option 2: Using a Direct Command
+
+```bash
+# Run a simulation with a specific chain ID (replace with your actual chain ID)
+curl -X POST http://localhost:8000/simulate/ \
+  -H "Content-Type: application/json" \
+  -d '{"chain_id": "d733faf0-3cda-483d-978c-bccc2fc06306", "steps": 20}'
+```
+
+#### Option 3: Using the Swagger UI
+
+1. Open http://localhost:8000/docs in your browser
+2. Navigate to the `/simulate/` POST endpoint
+3. Click "Try it out"
+4. Enter the chain ID and number of steps
+5. Click "Execute"
+
+### 5. Checking Agent Results
+
+```bash
+# Check the agent's status and counters
+curl http://localhost:8001/status
+
+# Reset the agent's counters if needed
+curl http://localhost:8001/reset
+```
+
+## Monitoring and Debugging
+
+- The agent logs all incoming webhook calls to the console
+- You can watch the agent's terminal to see real-time activity
+- The simulator's logs will show information about the default chain creation
+
+## API Overview
+
+### Main Simulator Endpoints
+
+- `GET /markov-chains/` - List all Markov chains
+- `POST /markov-chains/` - Create a new chain
+- `GET /default-chain` - Get the default chain ID
+- `POST /simulate/` - Run a simulation
+- `GET /agents/` - List all registered agents
+
+### Agent Endpoints
+
+- `GET /` - Endpoint that receives webhook calls
+- `GET /status` - Check agent status and counters
+- `GET /reset` - Reset agent counters
+
+## Troubleshooting
+
+- If the agent doesn't register, make sure the simulator is running first
+- If simulations don't trigger agent calls, check that the agent URL is accessible
+- If the application won't start, ensure all Python dependencies are installed
+- Watch the terminal output for any error messages
+
+## Advanced Usage
+
+See the API documentation at http://localhost:8000/docs for detailed information on creating custom Markov chains, registering custom agents, and advanced simulation options.
+
+## Development
+
+For local development, both the simulator and agent can run on the same machine using different ports. For more complex setups, see the "Exposing Agents for Webhooks during Development" section below.
 
 ## Exposing Agents for Webhooks during Development
 
@@ -121,92 +212,6 @@ If both the simulator and agent are running on the same machine, you can simply 
        }
    )
    ```
-
-## Example Usage
-
-### 1. Register an Agent
-
-```python
-import requests
-
-response = requests.post(
-    "http://localhost:8000/agents/register",
-    json={
-        "url": "https://your-webhook-endpoint.com/hook",
-        "name": "My Agent",
-        "description": "An agent that counts requests"
-    }
-)
-agent_data = response.json()
-agent_id = agent_data["id"]
-```
-
-### 2. Create a Markov Chain
-
-```python
-response = requests.post(
-    "http://localhost:8000/markov-chains",
-    json={
-        "states": {
-            "homepage": {
-                "name": "homepage",
-                "transitions": {"product": 0.7, "cart": 0.3},
-                "http_method": "GET",
-                "payload": {}
-            },
-            "product": {
-                "name": "product",
-                "transitions": {"cart": 0.6, "homepage": 0.4},
-                "http_method": "POST",
-                "payload": {"product_id": 123}
-            },
-            "cart": {
-                "name": "cart",
-                "transitions": {"checkout": 0.8, "homepage": 0.2},
-                "http_method": "GET",
-                "payload": {}
-            },
-            "checkout": {
-                "name": "checkout",
-                "transitions": {"homepage": 1.0},
-                "http_method": "POST",
-                "payload": {"payment_method": "credit_card"}
-            }
-        },
-        "initial_state": "homepage"
-    }
-)
-chain_id = response.json()["id"]
-```
-
-### 3. Run a Simulation
-
-```python
-response = requests.post(
-    "http://localhost:8000/simulate",
-    json={
-        "steps": 10,
-        "chain_id": chain_id
-    }
-)
-simulation_results = response.json()
-```
-
-### 4. Unregister an Agent
-
-```python
-response = requests.delete(f"http://localhost:8000/agents/{agent_id}")
-```
-
-## Tasks for Candidates
-
-1. Create an agent that counts the number of GET requests
-2. Implement an agent that responds differently based on the HTTP method
-3. Build an agent that tracks the most common payload values
-4. Develop an agent that maintains a session across requests
-5. Create an agent that responds with a recommendation based on previous requests
-6. Implement an agent that detects and alerts on unusual patterns
-7. Build an agent that simulates form submissions only when specific conditions are met
 
 ## License
 
