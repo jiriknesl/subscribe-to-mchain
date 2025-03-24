@@ -5,10 +5,10 @@ This module defines the Pydantic models used for representing
 simulations and their results.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Self
 from uuid import UUID, uuid4
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.agent import SimulationStep
 
@@ -19,12 +19,11 @@ class SimulationCreate(BaseModel):
     chain_id: UUID
     steps: int = 10
     
-    @field_validator("steps")
-    @classmethod
-    def validate_steps(cls, v: int) -> int:
+    @model_validator(mode='after')
+    def validate_steps(self) -> Self:
         """Validate the number of steps."""
-        assert 1 <= v <= 100, "Number of steps must be between 1 and 100"
-        return v
+        assert 1 <= self.steps <= 100, "Number of steps must be between 1 and 100"
+        return self
 
 
 class Simulation(BaseModel):

@@ -31,7 +31,12 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-The simulator will automatically create a default e-commerce Markov chain on startup. You can access the API at:
+The simulator will automatically create several default Markov chains on startup:
+- E-commerce User Journey
+- Social Media Interactions
+- Content Streaming Platform
+
+You can access the API at:
 - API: http://localhost:8000
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
@@ -53,23 +58,32 @@ The agent will automatically register itself with the simulator on startup. You 
 
 ### 4. Running a Simulation
 
-#### Option 1: Using the Default Chain ID Endpoint
+#### Option 1: Using Default Chains
+
+The simulator comes with several pre-configured Markov chains representing different user behavior patterns. You can run simulations using these defaults:
 
 ```bash
-# Get the default chain ID
-DEFAULT_CHAIN=$(curl -s http://localhost:8000/default-chain | python -c "import sys, json; print(json.load(sys.stdin)['id'])")
+# Run a simulation with the e-commerce default chain (20 steps)
+curl -X POST http://localhost:8000/simulations/default/ecommerce?steps=20
 
-# Run a simulation with 20 steps
-curl -X POST http://localhost:8000/simulate/ \
-  -H "Content-Type: application/json" \
-  -d "{\"chain_id\": \"$DEFAULT_CHAIN\", \"steps\": 20}"
+# Run a simulation with the social media default chain (15 steps)
+curl -X POST http://localhost:8000/simulations/default/social_media?steps=15
+
+# Run a simulation with the streaming platform chain (25 steps)
+curl -X POST http://localhost:8000/simulations/default/streaming?steps=25
+
+# Run simulations for all default chains (10 steps each)
+curl -X POST http://localhost:8000/simulations/run-all-defaults?steps=10
 ```
 
-#### Option 2: Using a Direct Command
+#### Option 2: Using Chain IDs Directly
 
 ```bash
+# Get all default chain IDs
+curl -s http://localhost:8000/default-chains
+
 # Run a simulation with a specific chain ID (replace with your actual chain ID)
-curl -X POST http://localhost:8000/simulate/ \
+curl -X POST http://localhost:8000/simulations/ \
   -H "Content-Type: application/json" \
   -d '{"chain_id": "d733faf0-3cda-483d-978c-bccc2fc06306", "steps": 20}'
 ```
@@ -77,9 +91,9 @@ curl -X POST http://localhost:8000/simulate/ \
 #### Option 3: Using the Swagger UI
 
 1. Open http://localhost:8000/docs in your browser
-2. Navigate to the `/simulate/` POST endpoint
+2. Navigate to the `/simulations/default/{chain_key}` POST endpoint
 3. Click "Try it out"
-4. Enter the chain ID and number of steps
+4. Enter the chain key (ecommerce, social_media, or streaming) and number of steps
 5. Click "Execute"
 
 ### 5. Checking Agent Results
@@ -104,8 +118,10 @@ curl http://localhost:8001/reset
 
 - `GET /markov-chains/` - List all Markov chains
 - `POST /markov-chains/` - Create a new chain
-- `GET /default-chain` - Get the default chain ID
-- `POST /simulate/` - Run a simulation
+- `GET /default-chains` - Get all default chain IDs
+- `POST /simulations/` - Run a simulation with a specified chain ID
+- `POST /simulations/default/{chain_key}` - Run a simulation with a default chain
+- `POST /simulations/run-all-defaults` - Run simulations for all default chains
 - `GET /agents/` - List all registered agents
 
 ### Agent Endpoints
@@ -216,3 +232,39 @@ If both the simulator and agent are running on the same machine, you can simply 
 ## License
 
 MIT 
+
+## Default Markov Chains
+
+The simulator comes with three pre-configured Markov chains that model different user behavior patterns:
+
+### 1. E-commerce User Journey 
+
+Models realistic user behavior on an e-commerce website, including:
+- Browsing products and categories
+- Searching for products
+- Adding items to cart
+- Checkout process
+- Account management
+- Writing reviews
+
+### 2. Social Media Interactions
+
+Simulates typical user interactions on a social media platform, including:
+- Browsing the feed
+- Viewing and interacting with posts
+- Liking and commenting
+- Following users
+- Managing profile
+- Messaging
+
+### 3. Content Streaming Platform
+
+Models how users interact with video/music streaming services, including:
+- Browsing content
+- Searching for content
+- Playing content
+- Rating content
+- Managing watchlists
+- Account and subscription management
+
+These default chains provide a ready-to-use starting point for testing agents and understanding the simulator's capabilities. 

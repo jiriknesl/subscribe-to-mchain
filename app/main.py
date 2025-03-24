@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Database
 from app.routers import markov, agent, simulation
 from app.models.markov import MarkovChain, State
+from app.default_chains import create_default_markov_chains, get_default_chain_ids
 
 # Configure logging
 logging.basicConfig(
@@ -452,8 +453,12 @@ async def startup_event():
     await Database.init_db()
     logger.info("Database initialized")
     
-    # Create default Markov chain
-    await create_default_markov_chain()
+    # Create default Markov chains
+    default_chains = await create_default_markov_chains()
+    if default_chains:
+        logger.info(f"✅ Created/found {len(default_chains)} default Markov chains")
+    else:
+        logger.warning("⚠️ No default Markov chains were created or found")
     
     logger.info("Application started")
 
@@ -466,16 +471,24 @@ async def health_check():
 
 
 # Get default chain endpoint
-@app.get("/default-chain", tags=["markov-chains"])
-async def get_default_chain():
-    """Get the default Markov chain ID."""
-    if default_chain_id:
-        return {"id": default_chain_id, "message": "Default chain is ready for use"}
+@app.get("/default-chains", tags=["markov-chains"])
+async def get_default_chains():
+    """Get all default Markov chain IDs."""
+    chain_ids = get_default_chain_ids()
     
-    # If no default ID is set, try to get the first chain
+    if chain_ids:
+        return {
+            "default_chains": chain_ids,
+            "message": "Default chains are ready for use"
+        }
+    
+    # If no default IDs are set, try to get all chains
     chains = await Database.get_all_markov_chains()
     if chains:
-        return {"id": chains[0].id, "message": "Using first available chain as default"}
+        return {
+            "chains": [{"id": str(chain.id), "name": chain.name} for chain in chains],
+            "message": "Using existing chains as no defaults were found"
+        }
     
     return {"error": "No Markov chains found in the database"}
 

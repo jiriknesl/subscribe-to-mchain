@@ -8,7 +8,7 @@ that can register webhooks to be notified of simulated user actions.
 from typing import Optional, List, Dict, Any
 from uuid import UUID, uuid4
 from datetime import datetime
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, ConfigDict
 
 
 class Agent(BaseModel):
@@ -21,8 +21,7 @@ class Agent(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     active: bool = True
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AgentCreate(BaseModel):

@@ -5,9 +5,9 @@ This module defines the Pydantic models used for representing Markov chains,
 their states, and transitions between states.
 """
 
-from typing import Dict, Any, Optional, Literal
+from typing import Dict, Any, Optional, Literal, Self
 from uuid import UUID, uuid4
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class State(BaseModel):
@@ -18,13 +18,12 @@ class State(BaseModel):
     http_method: Literal["GET", "POST", "PUT", "DELETE", "PATCH"]
     payload: Dict[str, Any] = Field(default_factory=dict)
     
-    @field_validator("transitions")
-    @classmethod
-    def validate_transitions(cls, v: Dict[str, float]) -> Dict[str, float]:
+    @model_validator(mode='after')
+    def validate_transitions(self) -> Self:
         """Validate that transition probabilities sum to approximately 1.0."""
-        total = sum(v.values())
+        total = sum(self.transitions.values())
         assert 0.99 <= total <= 1.01, f"Transition probabilities must sum to approximately 1.0, got {total}"
-        return v
+        return self
 
 
 class MarkovChain(BaseModel):
@@ -36,8 +35,8 @@ class MarkovChain(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     
-    @model_validator(mode="after")
-    def validate_states_and_transitions(self) -> "MarkovChain":
+    @model_validator(mode='after')
+    def validate_states_and_transitions(self) -> Self:
         """
         Validate that:
         1. The initial state exists in states
